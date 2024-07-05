@@ -27,7 +27,16 @@ module OmniAuth
         options.tenant_id =
           provider.respond_to?(:tenant_id) ? provider.tenant_id : 'common'
         options.base_azure_url =
-          provider.respond_to?(:base_azure_url) ? provider.base_azure_url : BASE_AZURE_URL
+          if provider.respond_to?(:base_azure_url)
+            provider.base_azure_url
+          elsif provider.respond_to?(:tenant_name)
+            "https://#{provider.tenant_name}.b2clogin.com"
+          else
+            BASE_AZURE_URL
+          end
+
+        options.tenant_url =
+          provider.respond_to?(:tenant_name) ? "#{provider.tenant_name}.onmicrosoft.com" : options.tenant_id
 
         if provider.respond_to?(:authorize_params)
           options.authorize_params = provider.authorize_params
@@ -50,12 +59,17 @@ module OmniAuth
         options.custom_policy =
           provider.respond_to?(:custom_policy) ? provider.custom_policy : nil
 
-        options.client_options.authorize_url = "#{options.base_azure_url}/#{options.tenant_id}/oauth2/v2.0/authorize"
+        options.client_options.authorize_url =
+          if options.custom_policy
+            "#{options.base_azure_url}/#{options.tenant_url}/#{options.custom_policy}/oauth2/v2.0/authorize"
+          else
+            "#{options.base_azure_url}/#{options.tenant_url}/oauth2/v2.0/authorize"
+          end
         options.client_options.token_url =
           if options.custom_policy
-            "#{options.base_azure_url}/#{options.tenant_id}/#{options.custom_policy}/oauth2/v2.0/token"
+            "#{options.base_azure_url}/#{options.tenant_url}/#{options.custom_policy}/oauth2/v2.0/token"
           else
-            "#{options.base_azure_url}/#{options.tenant_id}/oauth2/v2.0/token"
+            "#{options.base_azure_url}/#{options.tenant_url}/oauth2/v2.0/token"
           end
 
         super
